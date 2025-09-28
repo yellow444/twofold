@@ -207,7 +207,7 @@ Swagger доступен по `/swagger`.
 
 ## 12. DevOps и CI/CD
 
-* **GitHub Actions:**
+* **Docker Compose:**
 
   * `build`: сборка контейнеров, линт, тесты, публикация образов.
   * `migrate`: применение миграций в стейдже.
