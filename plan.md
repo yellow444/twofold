@@ -10,13 +10,13 @@
 
 ## Этап 1. Репозиторий, лицензии, базовый CI/CD
 
-**Технологии:** GitHub + Actions, Docker.
+**Технологии:** Docker Compose, Docker.
 **Задачи:**
 
 * Моно‑репозиторий: `backend/`, `frontend/`, `agents/`, `infra/`, `docs/`.
 * Шаблон лицензии (Apache‑2.0/MIT), `CODEOWNERS`, `CONTRIBUTING.md`.
-* GitHub Actions: линт, тесты, сборка Docker‑образов, публикация артефактов.
-  **DoD:** статанализ и unit‑тесты проходят; образы собираются и публикуются в GitHub Container Registry.
+* Docker Compose: линт, тесты, сборка Docker‑образов, публикация артефактов.
+  **DoD:** статанализ и unit‑тесты проходят; образы собираются.
 
 ## Этап 2. Схема данных и хранилища
 
