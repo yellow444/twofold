@@ -1,0 +1,6 @@
+flight_id,start_time,end_time,duration_minutes,region_code,region_name,latitude,longitude,vehicle_category,operator_type,flight_purpose,payload_type
+RU-2024-0001,2024-01-15T06:45:00Z,2024-01-15T07:30:00Z,45,RU-MOW,Москва,55.7558,37.6173,quadrotor,commercial,airspace survey,imaging
+RU-2024-0002,2024-01-22T09:10:00Z,2024-01-22T09:42:00Z,32,RU-SPE,Санкт-Петербург,59.9311,30.3609,quadrotor,government,infrastructure inspection,thermal
+RU-2024-0105,2024-02-05T04:00:00Z,2024-02-05T05:05:00Z,65,RU-MOW,Москва,55.7512,37.6184,fixed-wing,research,meteorological survey,atmospheric sensors
+RU-2024-0110,2024-02-18T11:30:00Z,2024-02-18T12:00:00Z,30,RU-SVE,Свердловская область,56.8389,60.6057,quadrotor,commercial,logistics,basic cargo
+RU-2024-0201,2024-03-03T08:25:00Z,2024-03-03T09:15:00Z,50,RU-KDA,Краснодарский край,45.0355,38.9753,hybrid VTOL,emergency,response support,medical supplies
