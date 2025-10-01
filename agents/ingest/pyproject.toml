@@ -1,0 +1,47 @@
+[build-system]
+requires = ["hatchling>=1.21"]
+build-backend = "hatchling.build"
+
+[project]
+name = "agent-ingest"
+version = "0.1.0"
+description = "Ingest agent command-line utilities and pipeline."
+readme = "README.md"
+authors = [{ name = "Twofold" }]
+license = { file = "LICENSE" }
+requires-python = ">=3.10"
+dependencies = [
+  "typer>=0.9",
+  "pydantic-settings>=2.2",
+  "pandas>=2.0",
+  "polars>=0.20",
+  "pyarrow>=14.0",
+  "duckdb>=0.9",
+  "psycopg[binary]>=3.1",
+  "boto3>=1.28",
+  "minio>=7.1",
+  "python-dateutil>=2.8",
+  "pendulum>=3.0",
+  "rich>=13.0",
+  "pytest>=7.0",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["app"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "app",
+  "README.md",
+  "LICENSE",
+  "pyproject.toml",
+  "tests",
+]
+
+[tool.ruff]
+line-length = 100
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+packages = ["app"]
