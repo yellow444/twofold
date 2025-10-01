@@ -5,6 +5,11 @@ from typing import Any, Dict
 
 import logging
 
+import pytest
+
+pytest.importorskip("typer")
+pytest.importorskip("typer.testing")
+
 from typer.testing import CliRunner
 
 from app.cli import app
