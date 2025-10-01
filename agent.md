@@ -48,11 +48,11 @@ repo/
 
 ```bash
 # 1) подготовить окружение
-cp infra/.env.example .env
+cp .env.example .env
 # 2) поднять инфраструктуру
-docker compose -f infra/docker-compose.yml up -d
-# 3) применить миграции БД
-docker compose exec backend dotnet ef database update
+docker compose -f infra/docker-compose.yml up -d postgres
+# 3) применить миграции БД (команда зависит от выбранного инструмента)
+docker compose -f infra/docker-compose.yml run --rm backend-build ./scripts/migrate.sh
 # 4) прогнать пробный ingest
 docker compose run --rm agent-ingest python -m app.cli ingest ./samples/rosaviation_2023.csv
 # 5) пересчитать агрегаты
