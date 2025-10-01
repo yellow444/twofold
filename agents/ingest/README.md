@@ -25,3 +25,27 @@ CLI-флаги:
 * Максимальный объём входного CSV без разбиения — 1 ГБ (стриминг >200 МБ автоматически);
 * В PDF желательно использовать однородные таблицы без объединённых ячеек; при ошибках парсинга агент переходит в режим текстового детектора и помечает загрузку как `metadata["degraded"]=True`;
 * Для HTML требуется наличие `<table>` c первой строкой заголовков или `thead`; дополнительные таблицы игнорируются.
+
+## Lineage и артефакты
+
+После нормализации пайплайн публикует артефакты в S3/MinIO со структурой `datasets/{year}/{version}/...`:
+
+* `raw.csv` — очищенный исходный CSV, сохранённый без потери заголовков;
+* `normalized.parquet` — нормализованный датасет в канонической схеме;
+* `lineage.json` — отчёт lineage с контрольной суммой входного файла и счётчиками строк.
+
+В таблице `dataset_version` обновляются поля:
+
+* `status` (`new` → `ingested`),
+* `ingested_at` — фактическое время загрузки,
+* `checksum` — SHA256 исходного файла,
+* `artifacts` — JSONB с URI артефактов (`raw`, `normalized`, `lineage`).
+
+Пример запуска CLI:
+
+```bash
+$ python -m app.cli ingest samples/rosaviation_sample.csv --year 2024 --dataset-version 2024-01
+INFO  [app.cli] Starting ingest command
+INFO  [app.pipeline] Loaded records {'total': 5, 'invalid': 0, 'duplicates': 0}
+INFO  [app.pipeline] Finished ingest pipeline {'dataset_version_id': 1, 'checksum': '...'}
+```
