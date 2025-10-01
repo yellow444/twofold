@@ -27,25 +27,24 @@
 Перед созданием PR локально выполните следующие команды и приложите результаты в описание:
 
 ```bash
-# Линтеры
-npm run lint --prefix frontend
-npm run lint --prefix backend
+# Линтеры всех компонент
+for service in backend frontend agent-aggregate agent-changewatcher agent-geo agent-ingest agent-insights agent-quality; do
+  docker compose -f infra/docker-compose.yml --profile lint run --rm "${service}-lint"
+done
 
-# Юнит-тесты
-npm test --prefix frontend
-npm test --prefix backend
-pytest agents
+# Юнит-тесты (дополните при появлении реальных тестов)
+for service in backend frontend agent-aggregate agent-changewatcher agent-geo agent-ingest agent-insights agent-quality; do
+  docker compose -f infra/docker-compose.yml --profile test run --rm "${service}-test"
+done
 
-dotnet test backend
-
-# Сборки
-npm run build --prefix frontend
-npm run build --prefix backend
-
-docker compose -f infra/docker-compose.yml build
+# Сборка и публикация артефактов
+for service in backend frontend agent-aggregate agent-changewatcher agent-geo agent-ingest agent-insights agent-quality; do
+  docker compose -f infra/docker-compose.yml --profile build run --rm "${service}-build"
+  docker compose -f infra/docker-compose.yml --profile publish run --rm "${service}-publish"
+done
 ```
 
-> Если команда временно не применима к вашей области (например, компонент ещё не инициализирован), отметьте это в PR и укажите причины.
+> Скрипты внутри контейнеров создают артефакты в томе `build-artifacts`. При появлении полноценных проектов замените заглушки на реальные линтеры/тесты, но сохраните интерфейс команд для единообразия CI.
 
 ## Правила коммитов
 
