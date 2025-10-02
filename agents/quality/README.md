@@ -31,16 +31,18 @@ CLI использует переменные окружения с префик
 
 ## Запуск CLI
 
-Проверка конкретной версии датасета и запись отчёта:
+Проверка конкретной версии датасета, запись отчёта и обновление Postgres:
 
 ```bash
 python -m agents.quality.app.cli validate --dataset-version 2024-Q1 \
-  --output artifacts/quality_report_2024-Q1.json
+  --db-host db.internal --db-port 5432 --db-user qa_bot --db-password secret
 ```
 
-Команда выводит итоговый статус `OK`, `WARN` или `FAIL` в stdout. Выходной код `1` возвращается только при статусе `FAIL`.
+CLI принимает параметры подключения напрямую (`--database-url`, `--db-host`, `--db-port`, `--db-name`, `--db-user`, `--db-password`, `--db-sslmode`). Они дополняют или переопределяют `QUALITY_DATABASE_URL` и позволяют запускать агент в разных окружениях без изменения переменных.
 
-Для быстрого запуска без сохранения отчёта используйте флаг `--dry-run`:
+Команда печатает итоговый `quality_status` (`validated`, `quality_warn`, `quality_fail`) в stdout. Выходной код `1` возвращается только при фактическом провале проверок (`quality_fail`).
+
+Флаг `--dry-run` отключает запись в БД, но артефакты (`quality_report_*.json`, `quality_violations_*.json`) продолжают сохраняться в директорию `ARTIFACTS_DIR`:
 
 ```bash
 python -m agents.quality.app.cli validate --dataset-version 2024-Q1 --dry-run
@@ -48,13 +50,16 @@ python -m agents.quality.app.cli validate --dataset-version 2024-Q1 --dry-run
 
 ## Интерпретация отчёта
 
-JSON-отчёт содержит список проверок с описанием и деталями:
+JSON-отчёт содержит агрегированную информацию о проверках и сохранён во вложении `quality_report_<версия>.json`:
 
 ```json
 {
   "dataset_version": "2024-Q1",
   "generated_at": "2024-03-15T12:30:01+00:00",
   "status": "WARN",
+  "quality_status": "quality_warn",
+  "warn_count": 1,
+  "fail_count": 0,
   "checks": [
     {
       "name": "monthly_completeness",
@@ -70,13 +75,41 @@ JSON-отчёт содержит список проверок с описани
       "status": "OK",
       "summary": "all durations within expected range"
     }
+  ],
+  "entries": [
+    {
+      "check_name": "monthly_completeness",
+      "severity": "WARN",
+      "details": {
+        "summary": "missing intermediate months detected",
+        "details": {
+          "missing_months": {"2024": [2]},
+          "observed": {"2024": [1, 3]}
+        }
+      }
+    },
+    {
+      "check_name": "duration_range",
+      "severity": "OK",
+      "details": {
+        "summary": "all durations within expected range"
+      }
+    }
   ]
 }
 ```
 
-- `status` — агрегированный итог по всем проверкам (при наличии хотя бы одного `FAIL`).
-- `checks` — результаты индивидуальных проверок: схема, диапазоны, уникальность, полнота месяцев, выбросы.
-- Поле `details` помогает быстро локализовать проблемные строки или диапазоны.
+- `status` — агрегированный итог по статусам `OK`/`WARN`/`FAIL`.
+- `quality_status` — значение, записываемое в `dataset_version.status`.
+- `warn_count`/`fail_count` — количество проверок в соответствующих состояниях.
+- `entries` — нормализованные строки, которые попадают в таблицу `quality_report` (каждый объект содержит `summary`, исходные `details` и списки затронутых записей/регионов, если они определены).
+- Дополнительный файл `quality_violations_<версия>.json` содержит краткую сводку: суммарные WARN/FAIL и финальный `quality_status`.
+
+### Обновление статусов в Postgres
+
+- Каждому запуску соответствует удаление прежних записей `quality_report` для выбранной версии и вставка актуальных результатов.
+- В таблице `dataset_version` обновляются поля `status`, `validated_at`, `quality_warn_count`, `quality_fail_count`. Значения статуса: `validated` (все проверки OK), `quality_warn` (есть WARN), `quality_fail` (есть FAIL).
+- При запуске с `--dry-run` вставки и обновления в БД не выполняются.
 
 ## Скрипты
 
