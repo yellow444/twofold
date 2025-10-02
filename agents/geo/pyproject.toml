@@ -1,0 +1,43 @@
+[build-system]
+requires = ["hatchling>=1.21"]
+build-backend = "hatchling.build"
+
+[project]
+name = "agent-geo"
+version = "0.1.0"
+description = "Geospatial tooling for the geo agent"
+readme = "README.md"
+authors = [{ name = "Twofold" }]
+requires-python = ">=3.10"
+dependencies = [
+  "typer==0.12.3",
+  "pydantic-settings==2.2.1",
+  "geopandas==0.14.4",
+  "shapely==2.0.4",
+  "pyogrio==0.7.2",
+  "psycopg[binary]==3.1.19",
+  "requests==2.31.0",
+  "rich==13.7.1",
+  "pytest==8.2.1",
+  "pytest-postgresql==5.1.0",
+]
+
+[project.scripts]
+ageo = "app.cli:app"
+
+[tool.hatch.build.targets.wheel]
+packages = ["app"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "app",
+  "README.md",
+  "pyproject.toml",
+  "tests",
+]
+
+[tool.ruff]
+line-length = 100
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
