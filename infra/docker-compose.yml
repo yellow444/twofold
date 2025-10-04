@@ -1,0 +1,274 @@
+version: "3.9"
+
+x-shared-service: &shared-service
+  restart: "no"
+  volumes:
+    - build-cache:/cache
+    - build-artifacts:/artifacts
+  networks:
+    - ci
+
+x-backend-build: &backend-build
+  context: ../backend
+  dockerfile: Dockerfile
+
+x-frontend-build: &frontend-build
+  context: ../frontend
+  dockerfile: Dockerfile
+
+x-agent-aggregate-build: &agent-aggregate-build
+  context: ../agents/aggregate
+  dockerfile: Dockerfile
+
+x-agent-changewatcher-build: &agent-changewatcher-build
+  context: ../agents/changewatcher
+  dockerfile: Dockerfile
+
+x-agent-geo-build: &agent-geo-build
+  context: ../agents/geo
+  dockerfile: Dockerfile
+
+x-agent-ingest-build: &agent-ingest-build
+  context: ../agents/ingest
+  dockerfile: Dockerfile
+
+x-agent-insights-build: &agent-insights-build
+  context: ../agents/insights
+  dockerfile: Dockerfile
+
+x-agent-quality-build: &agent-quality-build
+  context: ../agents/quality
+  dockerfile: Dockerfile
+
+services:
+  backend-lint:
+    <<: *shared-service
+    build:
+      <<: *backend-build
+      target: lint
+    profiles: ["lint"]
+
+  backend-test:
+    <<: *shared-service
+    build:
+      <<: *backend-build
+      target: test
+    profiles: ["test"]
+
+  backend-build:
+    <<: *shared-service
+    build:
+      <<: *backend-build
+      target: build
+    profiles: ["build"]
+
+  backend-publish:
+    <<: *shared-service
+    build:
+      <<: *backend-build
+      target: publish
+    profiles: ["publish"]
+
+  frontend-lint:
+    <<: *shared-service
+    build:
+      <<: *frontend-build
+      target: lint
+    profiles: ["lint"]
+
+  frontend-test:
+    <<: *shared-service
+    build:
+      <<: *frontend-build
+      target: test
+    profiles: ["test"]
+
+  frontend-build:
+    <<: *shared-service
+    build:
+      <<: *frontend-build
+      target: build
+    profiles: ["build"]
+
+  frontend-publish:
+    <<: *shared-service
+    build:
+      <<: *frontend-build
+      target: publish
+    profiles: ["publish"]
+
+  agent-aggregate-lint:
+    <<: *shared-service
+    build:
+      <<: *agent-aggregate-build
+      target: lint
+    profiles: ["lint"]
+
+  agent-aggregate-test:
+    <<: *shared-service
+    build:
+      <<: *agent-aggregate-build
+      target: test
+    profiles: ["test"]
+
+  agent-aggregate-build:
+    <<: *shared-service
+    build:
+      <<: *agent-aggregate-build
+      target: build
+    profiles: ["build"]
+
+  agent-aggregate-publish:
+    <<: *shared-service
+    build:
+      <<: *agent-aggregate-build
+      target: publish
+    profiles: ["publish"]
+
+  agent-changewatcher-lint:
+    <<: *shared-service
+    build:
+      <<: *agent-changewatcher-build
+      target: lint
+    profiles: ["lint"]
+
+  agent-changewatcher-test:
+    <<: *shared-service
+    build:
+      <<: *agent-changewatcher-build
+      target: test
+    profiles: ["test"]
+
+  agent-changewatcher-build:
+    <<: *shared-service
+    build:
+      <<: *agent-changewatcher-build
+      target: build
+    profiles: ["build"]
+
+  agent-changewatcher-publish:
+    <<: *shared-service
+    build:
+      <<: *agent-changewatcher-build
+      target: publish
+    profiles: ["publish"]
+
+  agent-geo-lint:
+    <<: *shared-service
+    build:
+      <<: *agent-geo-build
+      target: lint
+    profiles: ["lint"]
+
+  agent-geo-test:
+    <<: *shared-service
+    build:
+      <<: *agent-geo-build
+      target: test
+    profiles: ["test"]
+
+  agent-geo-build:
+    <<: *shared-service
+    build:
+      <<: *agent-geo-build
+      target: build
+    profiles: ["build"]
+
+  agent-geo-publish:
+    <<: *shared-service
+    build:
+      <<: *agent-geo-build
+      target: publish
+    profiles: ["publish"]
+
+  agent-ingest-lint:
+    <<: *shared-service
+    build:
+      <<: *agent-ingest-build
+      target: lint
+    profiles: ["lint"]
+
+  agent-ingest-test:
+    <<: *shared-service
+    build:
+      <<: *agent-ingest-build
+      target: test
+    profiles: ["test"]
+
+  agent-ingest-build:
+    <<: *shared-service
+    build:
+      <<: *agent-ingest-build
+      target: build
+    profiles: ["build"]
+
+  agent-ingest-publish:
+    <<: *shared-service
+    build:
+      <<: *agent-ingest-build
+      target: publish
+    profiles: ["publish"]
+
+  agent-insights-lint:
+    <<: *shared-service
+    build:
+      <<: *agent-insights-build
+      target: lint
+    profiles: ["lint"]
+
+  agent-insights-test:
+    <<: *shared-service
+    build:
+      <<: *agent-insights-build
+      target: test
+    profiles: ["test"]
+
+  agent-insights-build:
+    <<: *shared-service
+    build:
+      <<: *agent-insights-build
+      target: build
+    profiles: ["build"]
+
+  agent-insights-publish:
+    <<: *shared-service
+    build:
+      <<: *agent-insights-build
+      target: publish
+    profiles: ["publish"]
+
+  agent-quality-lint:
+    <<: *shared-service
+    build:
+      <<: *agent-quality-build
+      target: lint
+    profiles: ["lint"]
+
+  agent-quality-test:
+    <<: *shared-service
+    build:
+      <<: *agent-quality-build
+      target: test
+    profiles: ["test"]
+
+  agent-quality-build:
+    <<: *shared-service
+    build:
+      <<: *agent-quality-build
+      target: build
+    profiles: ["build"]
+
+  agent-quality-publish:
+    <<: *shared-service
+    build:
+      <<: *agent-quality-build
+      target: publish
+    profiles: ["publish"]
+
+volumes:
+  build-cache:
+  build-artifacts:
+
+networks:
+  ci:
+    driver: bridge
