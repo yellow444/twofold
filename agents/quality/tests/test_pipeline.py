@@ -14,7 +14,7 @@ from agents.ingest.app.schemas import CANONICAL_ORDER
 from agents.quality.app.checks import CheckStatus
 from agents.quality.app.config import QualitySettings
 from agents.quality.app.pipeline import QualityReport, run_pipeline
-from agents.quality.app.repository import QualityRepository
+from agents.quality.app.repository import FlightQualityIssue, QualityRepository
 
 SAMPLE_PATH = REPO_ROOT / "samples/rosaviation_sample.csv"
 
@@ -150,6 +150,11 @@ def test_run_pipeline_persists_results(tmp_path: Path) -> None:
     repository.connection.assert_called_once()
     repository.fetch_dataset_version_id.assert_called_once_with(connection, "2024-03")
     repository.replace_quality_reports.assert_called_once()
+    repository.replace_flight_quality_issues.assert_called_once_with(
+        connection,
+        7,
+        [],
+    )
     repository.update_dataset_version.assert_called_once_with(
         connection,
         7,
@@ -158,3 +163,36 @@ def test_run_pipeline_persists_results(tmp_path: Path) -> None:
         fail_count=report.fail_count,
     )
     assert report.status is CheckStatus.OK
+
+
+def test_pipeline_records_flight_quality_issues(tmp_path: Path) -> None:
+    settings = _make_settings(tmp_path)
+    dataframe = _sample_dataframe()
+    dataframe.loc[0, "duration_minutes"] = -5
+    dataframe = pd.concat([dataframe, dataframe.iloc[[0]]], ignore_index=True)
+
+    def loader(_: QualitySettings, __: str | None) -> pd.DataFrame:
+        return dataframe
+
+    repository = MagicMock(spec=QualityRepository)
+    connection = MagicMock()
+    repository.connection.return_value.__enter__.return_value = connection
+    repository.fetch_dataset_version_id.return_value = 3
+
+    report = run_pipeline(
+        settings,
+        dataset_version="2024-04",
+        loader=loader,
+        repository=repository,
+    )
+
+    # Flight level issues should be present in the in-memory report
+    flight_ids = {issue.flight_uid for issue in report.flight_issues}
+    assert "RU-2024-0001" in flight_ids
+
+    # Persisted payload matches expectations
+    repository.replace_flight_quality_issues.assert_called_once()
+    _, _, persisted_issues = repository.replace_flight_quality_issues.call_args.args
+    assert persisted_issues
+    assert all(isinstance(issue, FlightQualityIssue) for issue in persisted_issues)
+    assert {issue.flight_uid for issue in persisted_issues} == {"RU-2024-0001"}

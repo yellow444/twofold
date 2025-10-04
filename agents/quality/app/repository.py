@@ -24,6 +24,16 @@ class QualityReportEntry:
 
 
 @dataclass(slots=True)
+class FlightQualityIssue:
+    """Concrete quality issue affecting a specific flight record."""
+
+    flight_uid: str
+    check_name: str
+    severity: CheckStatus
+    details: dict[str, Any]
+
+
+@dataclass(slots=True)
 class QualityRepository:
     """Provide high-level helpers for persisting quality results."""
 
@@ -140,8 +150,91 @@ class QualityRepository:
                 (status, warn_count, fail_count, dataset_version_id),
             )
 
+    def clear_flight_quality_issues(self, conn: Connection, dataset_version_id: int) -> None:
+        """Remove existing flight-level quality issues for a dataset version."""
+
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                DELETE FROM flight_quality_issues
+                 WHERE dataset_version_id = %s
+                """,
+                (dataset_version_id,),
+            )
+
+    def insert_flight_quality_issues(
+        self,
+        conn: Connection,
+        dataset_version_id: int,
+        issues: Iterable[FlightQualityIssue],
+    ) -> None:
+        """Persist quality issues for flights belonging to ``dataset_version_id``."""
+
+        with conn.cursor() as cur:
+            for issue in issues:
+                cur.execute(
+                    """
+                    INSERT INTO flight_quality_issues (
+                        dataset_version_id,
+                        flight_uid,
+                        check_name,
+                        severity,
+                        details
+                    )
+                    VALUES (%s, %s, %s, %s, %s)
+                    """,
+                    (
+                        dataset_version_id,
+                        issue.flight_uid,
+                        issue.check_name,
+                        issue.severity.value,
+                        Jsonb(issue.details),
+                    ),
+                )
+
+    def replace_flight_quality_issues(
+        self,
+        conn: Connection,
+        dataset_version_id: int,
+        issues: Iterable[FlightQualityIssue],
+    ) -> None:
+        """Convenience helper to clear and re-insert flight quality issues."""
+
+        self.clear_flight_quality_issues(conn, dataset_version_id)
+        self.insert_flight_quality_issues(conn, dataset_version_id, issues)
+
+    def fetch_flight_quality_issues(
+        self, conn: Connection, dataset_version_id: int
+    ) -> list[FlightQualityIssue]:
+        """Return persisted quality issues for a dataset version."""
+
+        with conn.cursor(row_factory=dict_row) as cur:
+            cur.execute(
+                """
+                SELECT flight_uid, check_name, severity, details
+                  FROM flight_quality_issues
+                 WHERE dataset_version_id = %s
+                 ORDER BY flight_uid, check_name
+                """,
+                (dataset_version_id,),
+            )
+            rows = cur.fetchall() or []
+        issues: list[FlightQualityIssue] = []
+        for row in rows:
+            payload = row["details"] if row["details"] is not None else {}
+            issues.append(
+                FlightQualityIssue(
+                    flight_uid=row["flight_uid"],
+                    check_name=row["check_name"],
+                    severity=CheckStatus(row["severity"]),
+                    details=dict(payload),
+                )
+            )
+        return issues
+
 
 __all__ = [
     "QualityReportEntry",
+    "FlightQualityIssue",
     "QualityRepository",
 ]

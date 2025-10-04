@@ -95,6 +95,21 @@ JSON-отчёт содержит агрегированную информаци
         "summary": "all durations within expected range"
       }
     }
+  ],
+  "flight_issues": [
+    {
+      "flight_uid": "RU-2024-0105",
+      "check_name": "duration_range",
+      "severity": "FAIL",
+      "details": {
+        "summary": "found 1 durations outside range",
+        "details": {
+          "minimum": 1.0,
+          "maximum": 1440,
+          "invalid_count": 1
+        }
+      }
+    }
   ]
 }
 ```
@@ -103,6 +118,7 @@ JSON-отчёт содержит агрегированную информаци
 - `quality_status` — значение, записываемое в `dataset_version.status`.
 - `warn_count`/`fail_count` — количество проверок в соответствующих состояниях.
 - `entries` — нормализованные строки, которые попадают в таблицу `quality_report` (каждый объект содержит `summary`, исходные `details` и списки затронутых записей/регионов, если они определены).
+- `flight_issues` — список рейсов, для которых конкретные проверки вернули WARN/FAIL; каждая запись сохраняется в таблице `flight_quality_issues`.
 - Дополнительный файл `quality_violations_<версия>.json` содержит краткую сводку: суммарные WARN/FAIL и финальный `quality_status`.
 
 ### Обновление статусов в Postgres
@@ -110,6 +126,22 @@ JSON-отчёт содержит агрегированную информаци
 - Каждому запуску соответствует удаление прежних записей `quality_report` для выбранной версии и вставка актуальных результатов.
 - В таблице `dataset_version` обновляются поля `status`, `validated_at`, `quality_warn_count`, `quality_fail_count`. Значения статуса: `validated` (все проверки OK), `quality_warn` (есть WARN), `quality_fail` (есть FAIL).
 - При запуске с `--dry-run` вставки и обновления в БД не выполняются.
+
+### Поиск проблемных рейсов
+
+Результаты WARN/FAIL дополнительно сохраняются в таблице `flight_quality_issues`. Для каждого рейса фиксируются имя проверки, уровень серьёзности и JSON с расшифровкой проблемы. Найти все проблемные рейсы для конкретной версии датасета можно так:
+
+```sql
+SELECT flight_uid,
+       check_name,
+       severity,
+       details
+  FROM flight_quality_issues
+ WHERE dataset_version_id = :dataset_version_id
+ ORDER BY flight_uid, check_name;
+```
+
+Полученный список можно использовать для построения отчётов, срезов по операторам/регионам или для повторной валидации отдельных рейсов.
 
 ## Скрипты
 
