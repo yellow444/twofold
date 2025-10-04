@@ -3,10 +3,14 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Tuple
+
+import pyarrow as pa
 
 from .config import AppSettings
+from .formats import detect_format, load_records
 from .logging import get_logger
+from .normalization import normalize_records
 
 
 class IngestPipeline:
@@ -25,7 +29,7 @@ class IngestPipeline:
         storage_path: Optional[Path] = None,
         dry_run: bool = False,
         dataset_version: Optional[str] = None,
-    ) -> None:
+    ) -> Tuple[pa.Table, dict[str, int]]:
         """Execute the ingest pipeline for the provided source."""
 
         resolved_version = dataset_version or self.settings.dataset_version
@@ -47,7 +51,16 @@ class IngestPipeline:
                 extra={"context": context},
             )
 
-        # Placeholder for the actual ingest logic.
+        detected_format = detect_format(source, format_hint=fmt)
+        load_result = load_records(source, format_hint=detected_format)
+        table, counters = normalize_records(load_result)
+
+        self.logger.info(
+            "Loaded records",
+            extra={"context": {**context, "format": detected_format, **counters}},
+        )
+
         self.logger.debug("Pipeline configuration", extra={"context": self.settings.model_dump()})
 
         self.logger.info("Finished ingest pipeline", extra={"context": context})
+        return table, counters
