@@ -14,7 +14,11 @@ from agents.ingest.app.schemas import CANONICAL_ORDER
 from .checks import CheckResult, CheckStatus, DataCheck, default_checks
 from .config import QualitySettings
 from .logging import get_logger
-from .repository import QualityReportEntry, QualityRepository
+from .repository import (
+    FlightQualityIssue,
+    QualityReportEntry,
+    QualityRepository,
+)
 
 LOGGER = get_logger(__name__)
 
@@ -38,6 +42,7 @@ class QualityReport:
     quality_status: str
     checks: list[CheckResult]
     entries: list[QualityReportEntry]
+    flight_issues: list[FlightQualityIssue]
     warn_count: int
     fail_count: int
 
@@ -67,6 +72,15 @@ class QualityReport:
                     "details": entry.payload,
                 }
                 for entry in self.entries
+            ],
+            "flight_issues": [
+                {
+                    "flight_uid": issue.flight_uid,
+                    "check_name": issue.check_name,
+                    "severity": issue.severity.value,
+                    "details": issue.details,
+                }
+                for issue in self.flight_issues
             ],
         }
 
@@ -135,10 +149,13 @@ def _iter_sample_rows(details: dict[str, Any] | None) -> Iterator[dict[str, Any]
                     yield row
 
 
-def summarise_results(results: Iterable[CheckResult]) -> list[QualityReportEntry]:
+def summarise_results(
+    results: Iterable[CheckResult],
+) -> tuple[list[QualityReportEntry], list[FlightQualityIssue]]:
     """Convert raw :class:`CheckResult` objects into persistence payloads."""
 
     entries: list[QualityReportEntry] = []
+    flight_issues: list[FlightQualityIssue] = []
     for result in results:
         details = result.details or {}
         payload: dict[str, Any] = {"summary": result.summary}
@@ -164,7 +181,20 @@ def summarise_results(results: Iterable[CheckResult]) -> list[QualityReportEntry
                 payload=payload,
             )
         )
-    return entries
+        if result.status in {CheckStatus.WARN, CheckStatus.FAIL}:
+            for flight_uid in impacted_records:
+                issue_details = {"summary": result.summary}
+                if details:
+                    issue_details["details"] = details
+                flight_issues.append(
+                    FlightQualityIssue(
+                        flight_uid=flight_uid,
+                        check_name=result.name,
+                        severity=result.status,
+                        details=issue_details,
+                    )
+                )
+    return entries, flight_issues
 
 
 def run_pipeline(
@@ -185,7 +215,7 @@ def run_pipeline(
     data = data_loader(settings, dataset)
     results = run_checks(data, active_checks)
     status = aggregate_status(results)
-    entries = summarise_results(results)
+    entries, flight_issues = summarise_results(results)
     warn_count = sum(1 for entry in entries if entry.severity is CheckStatus.WARN)
     fail_count = sum(1 for entry in entries if entry.severity is CheckStatus.FAIL)
     quality_status = QUALITY_STATUS_MAP[status]
@@ -197,6 +227,7 @@ def run_pipeline(
         quality_status=quality_status,
         checks=results,
         entries=entries,
+        flight_issues=flight_issues,
         warn_count=warn_count,
         fail_count=fail_count,
     )
@@ -215,6 +246,7 @@ def run_pipeline(
         with repository.connection() as conn:
             dataset_id = repository.fetch_dataset_version_id(conn, dataset)
             repository.replace_quality_reports(conn, dataset_id, entries)
+            repository.replace_flight_quality_issues(conn, dataset_id, flight_issues)
             repository.update_dataset_version(
                 conn,
                 dataset_id,
