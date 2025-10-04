@@ -1,0 +1,9 @@
+# Default ownership
+* @twofold/maintainers
+
+# Component owners
+/backend/   @twofold/backend-team
+/frontend/  @twofold/frontend-team
+/agents/    @twofold/data-agents
+/infra/     @twofold/devops
+/docs/      @twofold/docs
