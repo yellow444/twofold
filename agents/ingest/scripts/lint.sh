@@ -1,41 +1,23 @@
 #!/usr/bin/env sh
-set -eu
+set -euo pipefail
 
 : "${COMPONENT_NAME:=agent-ingest}"
 : "${ARTIFACTS_DIR:=/artifacts}"
 : "${CACHE_DIR:=/cache}"
 
-mkdir -p "${ARTIFACTS_DIR}" "${CACHE_DIR}"
+SCRIPT_DIR="$(cd -- "$(dirname -- "$0")" && pwd)"
+PROJECT_DIR="$(dirname -- "${SCRIPT_DIR}")"
+PIP_CACHE_DIR="${CACHE_DIR}/pip"
 
-case "$(basename "$0")" in
-  lint.sh)
-    echo "Running lint for ${COMPONENT_NAME} (skeleton)."
-    printf 'lint_ok=true\ncomponent=%s\n' "${COMPONENT_NAME}" \
-      > "${ARTIFACTS_DIR}/${COMPONENT_NAME}_lint.log"
-    ;;
-  test.sh)
-    echo "Executing placeholder unit tests for ${COMPONENT_NAME}."
-    cat <<XML > "${ARTIFACTS_DIR}/${COMPONENT_NAME}_tests.xml"
-<?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="${COMPONENT_NAME}" tests="1" failures="0">
-  <testcase classname="placeholder" name="succeeds"/>
-</testsuite>
-XML
-    ;;
-  build.sh)
-    artifact="${ARTIFACTS_DIR}/${COMPONENT_NAME}_build.txt"
-    echo "Building ${COMPONENT_NAME} (placeholder)." | tee "${artifact}"
-    printf 'artifact=%s\n' "${artifact}" >> "${artifact}"
-    ;;
-  publish.sh)
-    artifact="${ARTIFACTS_DIR}/${COMPONENT_NAME}_publish.log"
-    {
-      echo "Publishing ${COMPONENT_NAME} (placeholder)."
-      echo "timestamp=$(date -u +%FT%TZ)"
-    } > "${artifact}"
-    ;;
-  *)
-    echo "Unknown script $(basename "$0")" >&2
-    exit 1
-    ;;
-esac
+mkdir -p "${ARTIFACTS_DIR}" "${PIP_CACHE_DIR}"
+
+cd "${PROJECT_DIR}"
+
+python -m pip install --cache-dir "${PIP_CACHE_DIR}" --upgrade pip >/dev/null
+python -m pip install --cache-dir "${PIP_CACHE_DIR}" --upgrade . ruff mypy >/dev/null
+
+ruff_log="${ARTIFACTS_DIR}/${COMPONENT_NAME}_ruff.log"
+mypy_log="${ARTIFACTS_DIR}/${COMPONENT_NAME}_mypy.log"
+
+python -m ruff check app tests 2>&1 | tee "${ruff_log}"
+python -m mypy app 2>&1 | tee "${mypy_log}"
