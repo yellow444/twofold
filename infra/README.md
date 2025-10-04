@@ -9,6 +9,8 @@
 * `build-cache` — кеш промежуточных файлов и зависимостей;
 * `build-artifacts` — итоговые артефакты (логи линтинга, отчёты тестов, сборки, журналы публикаций).
 
+Дополнительно определён сервис `postgres` на базе PostGIS, который хранит данные в отдельном томе `postgres-data` и инициализирует расширение `postgis` при старте.
+
 ### Примеры запуска
 
 ```bash
@@ -49,3 +51,27 @@ docker run --rm -v twofold_build-artifacts:/artifacts busybox ls -R /artifacts
 ## Структура каталогов
 
 Каждый компонент (backend, frontend, агенты) содержит `Dockerfile` и набор скриптов `scripts/*.sh`, которые отвечают за запуск соответствующих команд. Скрипты работают с переменными окружения `COMPONENT_NAME`, `ARTIFACTS_DIR` и `CACHE_DIR`, что позволяет при необходимости переопределить пути при интеграции с внешними CI/CD системами.
+
+## PostgreSQL/PostGIS локально
+
+1. Скопируйте пример переменных окружения и при необходимости подставьте собственные значения:
+
+   ```bash
+   cp .env.example .env
+   ```
+
+2. Поднимите базу данных и дождитесь статуса `healthy`:
+
+   ```bash
+   docker compose -f infra/docker-compose.yml up -d postgres
+   docker compose -f infra/docker-compose.yml ps postgres
+   ```
+
+3. После успешного старта выполните миграции из backend-а (конкретная команда зависит от выбранного инструмента миграций). Пример последовательности:
+
+   ```bash
+   # пример: запуск собственных миграций внутри образа backend
+   docker compose -f infra/docker-compose.yml run --rm backend-build ./scripts/migrate.sh
+   ```
+
+   Замените `./scripts/migrate.sh` на ваш фактический CLI (например, `alembic upgrade head`, `dotnet ef database update` и т.п.).
