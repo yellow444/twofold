@@ -67,11 +67,18 @@ docker run --rm -v twofold_build-artifacts:/artifacts busybox ls -R /artifacts
    docker compose -f infra/docker-compose.yml ps postgres
    ```
 
-3. После успешного старта выполните миграции из backend-а (конкретная команда зависит от выбранного инструмента миграций). Пример последовательности:
+3. После успешного старта примените SQL-миграции из каталога `infra/postgres/migrations/`:
 
    ```bash
-   # пример: запуск собственных миграций внутри образа backend
-   docker compose -f infra/docker-compose.yml run --rm backend-build ./scripts/migrate.sh
+   ./infra/postgres/migrate.sh
    ```
 
-   Замените `./scripts/migrate.sh` на ваш фактический CLI (например, `alembic upgrade head`, `dotnet ef database update` и т.п.).
+   Скрипт копирует миграции в контейнер `postgres` и применяет их последовательно через `psql` (с флагом `ON_ERROR_STOP`), выводя лог об успешных шагах.
+
+4. Для smoke-проверки геозапросов и годовых агрегатов выполните:
+
+   ```bash
+   ./infra/postgres/smoke.sh
+   ```
+
+   SQL-скрипт (`infra/postgres/smoke.sql`) запускает выборки с `ST_Intersects` и сверяет агрегаты `aggregates_year` с нормализованными полётами, что подтверждает корректность DoD по PostGIS и витринам.
